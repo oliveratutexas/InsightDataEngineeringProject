@@ -28,13 +28,13 @@ def remove_singular(df, col):
     return plural_frames
 
 
-def get_matches(df, regex='([\/]?r\/([a-zA-Z0-9_]+))'):
+def get_matches(df, regex='(^|\s+)([\/]?r\/([a-zA-Z0-9_]+))($|\s+)',group_index=3):
     '''
     Returns connectedComponents which have the string of interest
     '''
-    match_frame = df.withColumn('matches', regexp_extract('body', regex, 2))
+    match_frame = df.withColumn('match', regexp_extract('body', regex, group_index))
     match_components = match_frame.where(
-        match_frame['matches'] != '').select('component').distinct()
+        match_frame['match'] != '').select('component').distinct()
     return match_frame.join(match_components, 'component', 'right_outer')
 
 
@@ -44,10 +44,10 @@ def link_join(df):
     '''
 
     #TODO - could this one be optimized?
-    match_components = df.where(df['matches'] != '').select(
-        'matches', 'component').distinct()
+    match_components = df.where(df['match'] != '').select(
+        'match', 'component').withColumnRenamed('match','match_group').distinct()
     joined_links = match_components.join(
-        df.drop('matches'), ['component'], 'left_outer')
+        df, ['component'], 'left_outer')
 
     return joined_links
 
@@ -100,7 +100,8 @@ def run_tree_join():
     joined_links = link_join(clean_data)
 
     # TODO - at which points should I repartition on on what key?
-    joined_links.show()
+    joined_links.orderBy('match_group').write.json('example_output.txt')
+    joined_links.orderBy('match_group').show()
 
 
 if __name__ == '__main__':

@@ -31,7 +31,7 @@ class GraphTest(unittest.TestCase):
     def test_link_join(self):
         '''
         Returns the table that can be blocked into connected trees on the
-        matches column.
+        match_group column.
         '''
         _lst = [
             ('1', '2', 'someone1', 'body /r/sub1', 20, '/r/sub1', 'post1',1,'sub'),
@@ -45,15 +45,15 @@ class GraphTest(unittest.TestCase):
         ]
         _columns = [
             'id', 'parent_id', 'author', 'body', 'score', 'subreddit',
-            'post_id','component', 'matches'
+            'post_id','component', 'match'
         ]
 
 
         test_frame = self.ss.createDataFrame(_lst, _columns)
-        merged_frame = spark_run.link_join(self.ss, test_frame)
+        merged_frame = spark_run.link_join(test_frame)
         merged_frame.cache()
-        # merged_frame.show()
-        merged_list = merged_frame.select('matches').distinct().collect()
+        merged_frame.show()
+        merged_list = merged_frame.select('match_group').distinct().collect()
         self.assertEqual(len(merged_list),2)
 
     def test_get_matches(self):
@@ -62,6 +62,13 @@ class GraphTest(unittest.TestCase):
         ('1', '2', 'someone1', 'Hi I like /r/sub1', 20, '/r/sub1', 'post1',1),
         ('2', '1', 'someone2', 'null', 20, '/r/sub1', 'post1',1),
         ('6', '7', 'no_match', 'no_match_here', 20, '/r/sub1', 'post4',2),
+        ('6', '7', 'no_match', 'no_r/match_here', 20, '/r/sub1', 'post4',2),
+        ('6', '7', 'match', 'r/match_here', 20, '/r/sub1', 'post4',2),
+        ('6', '7', 'match', ' r/match_here', 20, '/r/sub1', 'post4',2),
+        ('6', '7', 'match', 'r/match_here ', 20, '/r/sub1', 'post4',2),
+        ('6', '7', 'match', '/r/match_here', 20, '/r/sub1', 'post4',2),
+        ('6', '7', 'match', ' /r/match_here', 20, '/r/sub1', 'post4',2),
+        ('6', '7', 'match', '/r/match_here ', 20, '/r/sub1', 'post4',2),
         ('4', '3', 'someone4', '/u/no_match', 20, '/r/sub1', 'post1',3),
         ('3', '4', 'someone3', 'r/subThree', 20, '/r/sub2', 'post2',3)
         ]
@@ -77,7 +84,7 @@ class GraphTest(unittest.TestCase):
 
         match_frame = spark_run.get_matches(test_frame_1)
         match_frame.show()
-        self.assertEqual(match_frame.count(),4,msg='Something eithers not getting filtered or is getting too filtered')
+        self.assertEqual(match_frame.count(),12,msg='Check the regex for fit')
 
     def test_remove_singular(self):
         result = spark_run.remove_singular(self.generalFrame, 'post_id')
