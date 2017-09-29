@@ -11,7 +11,7 @@ class GraphTest(unittest.TestCase):
 
         cls.sc = SparkContext('local', 'TestContext')
         cls.sc.setCheckpointDir('test_checkpoint')
-        # TODO - check this for redundancy
+
         cls.ss = SparkSession(cls.sc).builder.master("local").getOrCreate()
         cls.ss.conf.set("spark.sql.shuffle.partitions", 2)
         cls.ss.conf.set("spark.executor.memory", "10m")
@@ -28,7 +28,34 @@ class GraphTest(unittest.TestCase):
         cls.generalFrame = cls.ss.createDataFrame(_lst, cls.columns).repartition(10)
         cls.generalFrame.cache()
 
-    @unittest.skip('#TODO remove this')
+    def test_link_join(self):
+        '''
+        Returns the table that can be blocked into connected trees on the
+        matches column.
+        '''
+        _lst = [
+            ('1', '2', 'someone1', 'body /r/sub1', 20, '/r/sub1', 'post1',1,'sub'),
+            ('2', '1', 'someone2', 'in sub1', 20, '/r/sub1', 'post1',1,''),
+            ('4', '3', 'someone4', 'body2 /r/sub1', 20, '/r/sub2', 'post2',2,'sub'),
+            ('3', '4', 'someone3', 'in sub1 and subOther', 20, '/r/sub2', 'post2',2,'subOther'),
+            ('5', '6', 'someone5', 'body /r/subOther', 20, '/r/sub1', 'post1',3,'subOther'),
+            ('6', '5', 'someone6', 'in sub2', 20, '/r/sub1', 'post1',3,''),
+            ('7', '8', 'someone7', 'body2 /r/subOther', 20, '/r/sub2', 'post2',4,'subOther'),
+            ('8', '7', 'someone8', 'in sub2', 20, '/r/sub2', 'post2',4,'')
+        ]
+        _columns = [
+            'id', 'parent_id', 'author', 'body', 'score', 'subreddit',
+            'post_id','component', 'matches'
+        ]
+
+
+        test_frame = self.ss.createDataFrame(_lst, _columns)
+        merged_frame = spark_run.link_join(self.ss, test_frame)
+        merged_frame.cache()
+        # merged_frame.show()
+        merged_list = merged_frame.select('matches').distinct().collect()
+        self.assertEqual(len(merged_list),2)
+
     def test_get_matches(self):
         #Trivial case
         _lst = [
@@ -52,12 +79,10 @@ class GraphTest(unittest.TestCase):
         match_frame.show()
         self.assertEqual(match_frame.count(),4,msg='Something eithers not getting filtered or is getting too filtered')
 
-    @unittest.skip('#TODO remove this')
     def test_remove_singular(self):
         result = spark_run.remove_singular(self.generalFrame, 'post_id')
         self.assertEqual(result.count(), 2)
 
-    @unittest.skip('#TODO remove this')
     def test_produce_filtered_graph(self):
         _lst = [('1', '2', 'someone1', 'I really like /r/sub1', 20, '/r/sub1', 'post1'),
                 ('2', '1', 'someone2', 'body2', 20, '/r/sub1', 'post1'),
@@ -73,7 +98,7 @@ class GraphTest(unittest.TestCase):
         # result = spark_run.produce_filtered_graph(self.ss, self.generalFrame,
         #                                           1, 'post_id')
         result = spark_run.produce_filtered_graph(test_frame,
-                                                  1, 'post_id')
+                                                  'no_label')
 
         result.cache()
         result.show()
@@ -101,7 +126,7 @@ class GraphTest(unittest.TestCase):
 
     def test_lone_node(self):
         '''
-        There are no other
+        There are no other nodes
         '''
         pass
 
