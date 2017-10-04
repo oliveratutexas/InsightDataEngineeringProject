@@ -5,6 +5,7 @@ import spark_run
 
 
 class GraphTest(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(GraphTest, cls).setUpClass()
@@ -59,18 +60,18 @@ class GraphTest(unittest.TestCase):
     def test_get_matches(self):
         #Trivial case
         _lst = [
-        ('1', '2', 'someone1', 'Hi I like /r/sub1', 20, '/r/sub1', 'post1',1),
-        ('2', '1', 'someone2', 'null', 20, '/r/sub1', 'post1',1),
-        ('6', '7', 'no_match', 'no_match_here', 20, '/r/sub1', 'post4',2),
-        ('6', '7', 'no_match', 'no_r/match_here', 20, '/r/sub1', 'post4',2),
-        ('6', '7', 'match', 'r/match_here', 20, '/r/sub1', 'post4',2),
-        ('6', '7', 'match', ' r/match_here', 20, '/r/sub1', 'post4',2),
-        ('6', '7', 'match', 'r/match_here ', 20, '/r/sub1', 'post4',2),
-        ('6', '7', 'match', '/r/match_here', 20, '/r/sub1', 'post4',2),
-        ('6', '7', 'match', ' /r/match_here', 20, '/r/sub1', 'post4',2),
-        ('6', '7', 'match', '/r/match_here ', 20, '/r/sub1', 'post4',2),
-        ('4', '3', 'someone4', '/u/no_match', 20, '/r/sub1', 'post1',3),
-        ('3', '4', 'someone3', 'r/subThree', 20, '/r/sub2', 'post2',3)
+            ('1', '2', 'someone1', 'Hi I like /r/sub1', 20, '/r/sub1', 'post1',1),
+            ('2', '1', 'someone2', 'null', 20, '/r/sub1', 'post1',1),
+            ('6', '7', 'no_match', 'no_match_here', 20, '/r/sub1', 'post4',2),
+            ('6', '7', 'no_match', 'no_r/match_here', 20, '/r/sub1', 'post4',2),
+            ('6', '7', 'match', 'r/match_here', 20, '/r/sub1', 'post4',2),
+            ('6', '7', 'match', ' r/match_here', 20, '/r/sub1', 'post4',2),
+            ('6', '7', 'match', 'r/match_here ', 20, '/r/sub1', 'post4',2),
+            ('6', '7', 'match', '/r/match_here', 20, '/r/sub1', 'post4',2),
+            ('6', '7', 'match', ' /r/match_here', 20, '/r/sub1', 'post4',2),
+            ('6', '7', 'match', '/r/match_here ', 20, '/r/sub1', 'post4',2),
+            ('4', '3', 'someone4', '/u/no_match', 20, '/r/sub1', 'post1',3),
+            ('3', '4', 'someone3', 'r/subThree', 20, '/r/sub2', 'post2',3)
         ]
 
         # _columns = self.columns + ['component']
