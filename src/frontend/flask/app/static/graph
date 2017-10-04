@@ -1,0 +1,14 @@
+digraph zappa {
+	subgraph trees {
+		c1b07mk [label="clamy420
+2
+Oh shit, I didn't know about this! Bitching"]
+		c1b07mk -> c1b07it
+	}
+	subgraph "!center!" {
+		c1b07it [label="Chupka
+2
+theres already r/zappa but feel free to bring more zappa to reddit"]
+		c1b07it -> c1b05w5
+	}
+}
