@@ -1,3 +1,0 @@
-Flask
-graphviz
-redis
