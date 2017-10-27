@@ -1,0 +1,141 @@
+digraph todayilearned {
+	label="Comment graph for /r/todayilearned"
+	fontsize=50
+	subgraph cluster_SomebodyMakeThis {
+		style=filled
+		color=lightgrey
+		label="/r/SomebodyMakeThis"
+		c1eted2 -> c1eukf4
+		fc2ah -> c1eted2
+	}
+	subgraph cluster_self {
+		style=filled
+		color=lightgrey
+		label="/r/self"
+		c1b2xmb -> c1b39yv
+		c1b2vi0 -> c1b2xmb
+		c1b2vb9 -> c1b2vi0
+		euohi -> c1b2vb9
+	}
+	subgraph cluster_videos {
+		style=filled
+		color=lightgrey
+		label="/r/videos"
+		c1emgt1 -> c1emiap
+		fb1tj -> c1emgt1
+	}
+	subgraph cluster_funny {
+		style=filled
+		color=lightgrey
+		label="/r/funny"
+		c1ek80u -> c1ekfio
+		fat43 -> c1ek80u
+	}
+	subgraph cluster_gaming {
+		style=filled
+		color=lightgrey
+		label="/r/gaming"
+		c1cmsrr -> c1cnbqt
+		c1cmmj0 -> c1cmsrr
+		c1cmk70 -> c1cmmj0
+		f1r4n -> c1cmk70
+	}
+	subgraph cluster_todayilearned {
+		style=filled
+		color=lightgrey
+		label="/r/todayilearned"
+		c1cr0qg -> c1cr9fq
+		c1cqwpe -> c1cr0qg
+		f2aqo -> c1cqwpe
+		c1bbx9i -> c1bcd7m
+		evinu -> c1bbx9i
+	}
+	subreddit_name [label=todayilearned shape=doublecircle]
+	c1eukf4 [label="unquietwiki
+1
+Get that over to /r/todayilearned : I didnt know about the
+palmup salute (heard of the Roman/Hitler salute: this one
+seems friendlier than that)."]
+	c1eted2 [label="grok
+9
+Like [this](http://www.youtube.com/watchvVA0A0ymd0CM)"]
+	c1ekfio [label="rolmos
+35
+/r/todayilearned  TIL theres a funny video of a gorilla"]
+	c1ek80u [label="Warlizard
+414
+Crossposted to:    /r/atheism  Ok Christians THERES
+your Missing Link.    /r/sex  Hah thats how my wife
+walked out last night after I tried the Candle Maneuver.
+/r/gonewild  [F]irst time please be nice
+/r/conspiracy  They trained gorillas to be suicide
+bombers back in the early 1970s.    /r/trees 
+HAHAHHAAHAH (8)."]
+	c1cr9fq [label="psychometry
+0
+Pretty much everything could belong in this subreddit if it
+is somehow new information to someone.  But if you take a
+look at the front page of /r/todayilearned I think youll
+agree that this doesnt belong."]
+	c1cr0qg [label="[deleted]
+4
+Yeah this is r/nofuntimesorhappinessever"]
+	c1cqwpe [label="psychometry
+-3
+This is not /r/funny."]
+	c1b39yv [label="forrestnotgump
+1
+Haha thank you very much for your help but Ive been
+lurking long enough to know whats going on for the most
+part. r/todayilearned is probably the coolest thing Ive
+seen on here."]
+	c1b2xmb [label="jmnugent
+1
+I mainly hang out watching http://www.reddit.com/r/all/new
+I like it because it shows all the freshest/newest posts
+but sometimes you start to comment on a post and someones
+already deleted it.   The main page (http://www.reddit.com/)
+will probably give you a better idea of the themes
+currently being discussed."]
+	c1b2vi0 [label="forrestnotgump
+1
+:D My first reply Im so excited."]
+	c1b2vb9 [label="jmnugent
+1
+gt I then spent about five minutes on Fark before
+deciding Reddit was probably my best option.  Even though
+Im also a Farker.... . I LOLd.   WELCOME TO REDDIT.
+Theres some holiday pie left in the fridge. Help yourself."]
+	c1bcd7m [label="000890569
+1
+gt /r/todayilearned"]
+	c1bbx9i [label="Toronto_Boy
+10
+I know this will get downvoted BUT  I finally realised
+what TIL means.  Today I Learned   Usually I am one to
+lookup unfamiliar abbreviations but I also get much
+satisfaction when I crack them myself... This is one small
+victory"]
+	c1emiap [label="PandoRamma
+1
+I posted it in r/todayilearned but got in trouble because it
+wasnt TILey enough. Whats more amazing though is that its
+posted on Livingstons youtube account which appears to be
+made just for this one video."]
+	c1emgt1 [label="[deleted]
+2
+I didnt bother to check if this is a repost or not but
+damn that is funny."]
+	c1cnbqt [label="Chrsch
+2
+because of r/todayilearned"]
+	c1cmsrr [label="[deleted]
+3
+[deleted]"]
+	c1cmmj0 [label="RedDeath
+2
+Sad But True..."]
+	c1cmk70 [label="unorgnlbstrd
+46
+Anybody else read that as Today I Learned at first"]
+}
