@@ -2,7 +2,7 @@ import unittest
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 import spark_run
-
+from graphframes import GraphFrame
 
 class GraphTest(unittest.TestCase):
 
@@ -10,12 +10,14 @@ class GraphTest(unittest.TestCase):
     def setUpClass(cls):
         super(GraphTest, cls).setUpClass()
 
-        cls.sc = SparkContext('local', 'TestContext')
-        cls.sc.setCheckpointDir('test_checkpoint')
+        cls.sc = SparkContext(appName='TreeTest')
+        cls.sc.setCheckpointDir('checkpoint')
 
-        cls.ss = SparkSession(cls.sc).builder.master("local").getOrCreate()
-        cls.ss.conf.set("spark.sql.shuffle.partitions", 2)
-        cls.ss.conf.set("spark.executor.memory", "10m")
+        cls.ss = SparkSession(cls.sc).builder.master("local[*]").getOrCreate()
+        cls.ss.conf.set("spark.sql.shuffle.partitions", 10)
+        cls.ss.conf.set("spark.executor.memory", "1g")
+        cls.ss.conf.set("spark.default.parallelism", "10")
+
 
         _lst = [('1', '2', 'someone1', 'body1', 20, '/r/sub1', 'post1'),
                 ('2', '1', 'someone2', 'body2', 20, '/r/sub1', 'post1'),
@@ -57,92 +59,70 @@ class GraphTest(unittest.TestCase):
         merged_list = merged_frame.select('match_group').distinct().collect()
         self.assertEqual(len(merged_list),2)
 
-    def test_get_matches(self):
+    def test_get_matched_components(self):
         #Trivial case
         _lst = [
-            ('1', '2', 'someone1', 'Hi I like /r/sub1', 20, '/r/sub1', 'post1',1),
-            ('2', '1', 'someone2', 'null', 20, '/r/sub1', 'post1',1),
-            ('6', '7', 'no_match', 'no_match_here', 20, '/r/sub1', 'post4',2),
-            ('6', '7', 'no_match', 'no_r/match_here', 20, '/r/sub1', 'post4',2),
-            ('6', '7', 'match', 'r/match_here', 20, '/r/sub1', 'post4',2),
-            ('6', '7', 'match', ' r/match_here', 20, '/r/sub1', 'post4',2),
-            ('6', '7', 'match', 'r/match_here ', 20, '/r/sub1', 'post4',2),
-            ('6', '7', 'match', '/r/match_here', 20, '/r/sub1', 'post4',2),
-            ('6', '7', 'match', ' /r/match_here', 20, '/r/sub1', 'post4',2),
-            ('6', '7', 'match', '/r/match_here ', 20, '/r/sub1', 'post4',2),
-            ('4', '3', 'someone4', '/u/no_match', 20, '/r/sub1', 'post1',3),
-            ('3', '4', 'someone3', 'r/subThree', 20, '/r/sub2', 'post2',3)
+            ('1', ''),
+            ('1', ''),
+            ('2', ''),
+            ('2', 'match_here'),
+            ('3', ''),
+            ('3', ''),
+            ('3', ''),
+            ('4', ''),
+            ('4', 'match_here'),
+            ('5', '')
         ]
 
         # _columns = self.columns + ['component']
         _columns = [
-            'id', 'parent_id', 'author', 'body', 'score', 'subreddit',
-            'post_id','component'
+            'component','match'
         ]
 
 
         test_frame_1 = self.ss.createDataFrame(_lst,_columns)
 
-        match_frame = spark_run.get_matches(test_frame_1)
+        match_frame = spark_run.get_matched_components(test_frame_1)
         match_frame.show()
-        self.assertEqual(match_frame.count(),12,msg='Check the regex for fit')
+        self.assertEqual(match_frame.count(),4)
 
     def test_remove_singular(self):
         result = spark_run.remove_singular(self.generalFrame, 'post_id')
         self.assertEqual(result.count(), 2)
 
-    def test_produce_filtered_graph(self):
-        _lst = [('1', '2', 'someone1', 'I really like /r/sub1', 20, '/r/sub1', 'post1'),
-                ('2', '1', 'someone2', 'body2', 20, '/r/sub1', 'post1'),
-                ('3', '4', 'someone3', 'body3', 20, '/r/sub2', 'post2')]
-
-        _columns = [
-            'id', 'parent_id', 'author', 'body', 'score', 'subreddit',
-            'post_id'
-        ]
-
-        test_frame = self.ss.createDataFrame(_lst,_columns)
-
-        # result = spark_run.produce_filtered_graph(self.ss, self.generalFrame,
-        #                                           1, 'post_id')
-        result = spark_run.produce_filtered_graph(test_frame,
-                                                  'no_label')
-
-        result.cache()
-        result.show()
-        # should remove post2
-        self.assertEqual(len(result.collect()), 2)
-
-        # should produce only one component
-
     def test_tree_trim(self):
         '''
-        Trim nodes not reachable from token match.
-        (No need to visualize off topic conversations)
+        Removes irrelvant branches from original post.
+        Input:
+            1           4
+           2 3*        5 6
+                          7*
+        Output:
+            1           4
+             3*          6
+                          7*
         '''
+        _lst = [
+            ('1', 't3_100', 'som1', 'body', 'post1','1_comp',''),
+            ('2', '1', 'som2', 'body', 'post1','1_comp',''),
+            ('3', '1', 'som3', '/r/match1', 'post1','1_comp','match1'),
+            ('4', 't3_2', 'som1', 'body', 'post1','1_comp',''),
+            ('5', '4', 'som2', 'body', 'post1','1_comp',''),
+            ('6', '4', 'som3', '', 'post1','1_comp',''),
+            ('7', '6', 'som3', '/r/match2', 'post1','1_comp','match2')
+        ]
+        _columns = [
+            'id', 'parent_id', 'author', 'body',
+            'post_id','component', 'match'
+        ]
 
-        #basic tree
+        test_frame = self.ss.createDataFrame(_lst, _columns)
 
-        #long side conversations pruning
-        pass
-
-    def test_multiple_reference(self):
-        '''
-        Multiple references should yield results
-        '''
-        pass
-
-    def test_lone_node(self):
-        '''
-        There are no other nodes
-        '''
-        pass
-
-    def test_lone_graph(self):
-        '''
-        Only comments no other node has replied to.
-        '''
-        pass
+        graph_frame = spark_run.comments_to_graph(test_frame,'id','id','parent_id')
+        trimmed_tree = spark_run.tree_trim(graph_frame)
+        self.assertTrue(
+            len(trimmed_tree.collect()) == 5
+        )
 
     def test_same_graph(self):
         '''

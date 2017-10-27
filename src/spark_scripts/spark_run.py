@@ -1,9 +1,11 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructField, StringType, BooleanType
 from pyspark.sql.types import StructType, LongType, IntegerType
+from pyspark.sql.functions import udf
 from pyspark import SparkContext
 from pyspark.sql.functions import regexp_replace, regexp_extract
 from graphframes import GraphFrame
+import itertools
 import redis
 import sys
 import datetime
@@ -17,8 +19,7 @@ def comments_to_graph(df, id_col, src_col, dest_col):
     takes in a table of raw reddit data
     returns a graphframe
     '''
-    # vertices = df.withColumnRenamed(id_col, 'id')
-    vertices = df
+    vertices = df.withColumnRenamed(id_col, 'id')
     edges = vertices.select(src_col, dest_col).withColumnRenamed(
         src_col, 'src').withColumnRenamed(dest_col, 'dst')
 
@@ -48,32 +49,75 @@ def remove_singular(df, col):
 #     return df.join(match_components, 'component', 'right_outer')
 
 
-def get_matched_components(
-        df, link_regex='(^|\s+)([\/]?r\/([a-zA-Z0-9_]+))($|\s+)',
-        group_index=3):
+def get_matches(df,
+                link_regex='((^)([\/]?r\/([a-zA-Z0-9_]+))($))+',
+                group_index=4):
+
+    match_frame = df.withColumn('match',
+                                regexp_extract('body', link_regex,
+                                               group_index))
+    return match_frame
+
+
+#TODO -test this out
+def get_matched_components(df):
     '''
     Strips the components that have no links attached to them.
     Returns every sub connected component containing a match
     '''
-    match_frame = df.withColumn('match',
-                                regexp_extract('body', link_regex,
-                                               group_index))
-    match_components = match_frame.where(
-        match_frame['match'] != '').select('component').distinct()
+    match_components = df.where(
+        df['match'] != '').select('component').distinct()
 
-    return match_frame.join(match_components, 'component')
+    return df.join(match_components, 'component')
+
+
+def get_path_nodes(graph, src_id):
+    '''
+    BFS returns an odd format for searching.
+    Need our own format.
+    '''
+    # t3_ begging indicates a link to a post
+    path = graph.bfs('id == "' + src_id + '"', 'parent_id LIKE "t3_%"')
+
+    # edge columns begin with e
+    # can return if there are not enough edges.
+    filtered_cols = list(filter(lambda x: x[0] == 'e', path.columns))
+    if (len(filtered_cols) < 2):
+        return []
+
+    # there's only one row guaranteed to return because
+    # we're working with a tree
+    big_row = path.select(*filtered_cols).collect()
+    # return the original source id with the
+    # edges we used
+    ids = [val[1] for val in big_row[0]] + [src_id]
+    return ids
 
 
 def tree_trim(graph):
     '''
     we want to find every comment in this graph that leads to
     a subreddit link.
+
+    requires a graph that has
+    a match for every relevant regex
+
+    ### NOTE
+    I do not like this function. If I knew scala well, I'd re-implement
+    the bfs algorithm to return edge dfs, union the dfs, and innersect
+    the original frame to filter out wayward conversations.
     '''
-    return graph.bfs("match != ''",
-                     graph.vertices['parent_id'].startswith('t3_'))
-    # return graph.bfs(
-    #     graph.vertices['match'] != '',
-    #     graph.vertices['parent_id'].startswith('t3_'))
+    # find every item where there are matches
+    graph.cache()
+
+    search_rows = graph.vertices.where(
+        graph.vertices['match'] != '').select('id').collect()
+    search_ids = map(lambda x: x[0], search_rows)
+    approve_lists = [get_path_nodes(graph, src_id) for src_id in search_ids]
+    flattened_approvals = list(itertools.chain.from_iterable(approve_lists))
+    result = graph.vertices.where(graph.vertices['id'].isin(flattened_approvals))
+    graph.unpersist()
+    return result
 
 
 def link_join(df):
@@ -131,17 +175,30 @@ def link_join(df):
 #     union_graph.show()
 #     return union_graph
 
+def make_tree_path(edges,from_cond,to_cond):
+    '''
+    Takes in the edges from a tree;
+    returns an edgelist ordered
+    '''
+    edges.sqlContext.createDat
 
 def partition_graph_gen(df):
     '''
-    Runs the connected components algorithm for the graph.
+    Filters the table
     '''
     # don't want to go to other partitions unnecessarily
     df = df.repartition('post_id')
     df = df.orderBy('post_id')
-    graph = comments_to_graph(df, 'id', 'id',
-                              'parent_id')
-    gccs = graph.connectedComponents()
+    # creates a match column for each line
+    match_table = get_matches(df)
+
+    # trims irrelevant conversations from the graph
+    graph = comments_to_graph(match_table, 'id', 'id', 'parent_id')
+    trimmed_graph = tree_trim(graph)
+
+    # remove singular items and conversations that have
+    # no links to other subreddits
+    gccs = trimmed_graph.connectedComponents()
     return get_matched_components(remove_singular(gccs, 'component'))
 
 
@@ -157,6 +214,7 @@ def write_to_redis(df, host='localhost', port=6379):
         selection = df.where(df['match_group'] == match)
         json_blob = selection.toJSON().collect()
         redis_handle.set(str(match), "\n".join(json_blob))
+    df.unpersist()
 
 
 def get_clean_data(ss, data_path, reddit_schema):
@@ -183,7 +241,7 @@ def get_clean_data(ss, data_path, reddit_schema):
     table = table.where(
         parent_col.startswith('t3_') | parent_col.startswith('t1_'))
     table = table.withColumn('parent_id',
-                             regexp_replace('parent_id', '(t3_|t1_)',
+                             regexp_replace('parent_id', '(t1_)',
                                             '')).withColumnRenamed(
                                                 'link_id', 'post_id')
 
@@ -195,9 +253,6 @@ def run_tree_join(ACCESS_KEY, SECRET_KEY, REDIS_SERVER, REDIS_PORT,
 
     sc = SparkContext(appName='TreeJoin')
 
-    # sc._jsc.hadoopConfiguration().set("fs.s3n.awsAccessKeyId", ACCESS_KEY)
-    # sc._jsc.hadoopConfiguration().set("fs.s3n.awsSecretAccessKey", SECRET_KEY)
-    # ec2-34-215-152-233.us-west-2.compute.amazonaws.com
     sc.setCheckpointDir(CHECKPOINT_REMOTE_DIR)
 
     ss = SparkSession(sc).builder.getOrCreate()
@@ -232,18 +287,10 @@ def run_tree_join(ACCESS_KEY, SECRET_KEY, REDIS_SERVER, REDIS_PORT,
         StructField('ups', IntegerType())
     ])
 
-    # [('archived', 'boolean'), ('author', 'string'), ('author_flair_css_class', 'string'), ('author_flair_text', 'string'), ('body', 'string'), ('controversiality', 'bigint'), ('created_utc', 'string'), ('distinguished', 'string'), ('downs', 'bigint'), ('edited', 'string'), ('gilded', 'bigint'), ('id', 'string'), ('link_id', 'string'), ('name', 'string'), ('parent_id', 'string'), ('retrieved_on', 'bigint'), ('score', 'bigint'), ('score_hidden', 'boolean'), ('subreddit', 'string'), ('subreddit_id', 'string'), ('ups', 'bigint')]
-
     clean_data = get_clean_data(ss, file_download_path, reddit_schema)
     joined_links = link_join(clean_data)
     joined_links = joined_links.repartition('match_group')
     write_to_redis(joined_links, REDIS_SERVER, REDIS_PORT)
-
-    # TODO - at which points should I repartition on on what key?
-    output_path = '_output_' + datetime.datetime.now().strftime(
-    "%Y_%m_%d_%H__%M__%S")
-    joined_links.orderBy('match_group').write.json(output_path)
-    joined_links.orderBy('match_group').show()
 
 
 if __name__ == '__main__':
